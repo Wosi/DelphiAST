@@ -64,6 +64,7 @@ type
     procedure AdditiveOperator; override;
     procedure AddressOp; override;
     procedure AlignmentParameter; override;
+    procedure AncestorIdList; override;
     procedure AnonymousMethod; override;
     procedure ArrayBounds; override;
     procedure ArrayConstant; override;
@@ -318,6 +319,18 @@ begin
   finally
     FStack.Pop;
   end;
+end;
+
+
+procedure TPasSyntaxTreeBuilder.AncestorIdList;
+begin
+  FStack.PushCompoundSyntaxNode(ntAncestorIDs);
+  try
+    inherited;
+    SetCurrentCompoundNodesEndPosition;
+  finally
+    FStack.Pop;
+  end;  
 end;
 
 procedure TPasSyntaxTreeBuilder.AnonymousMethod;
