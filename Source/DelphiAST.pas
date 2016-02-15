@@ -118,6 +118,8 @@ type
     procedure ExportedHeading; override;
     procedure ExportsClause; override;
     procedure ExportsElement; override;
+    procedure ExportsName; override;
+    procedure ExportsNameId; override;
     procedure Expression; override;
     procedure ExpressionList; override;
     procedure ExternalDirective; override;
@@ -1041,12 +1043,37 @@ end;
 
 procedure TPasSyntaxTreeBuilder.ExportsElement;
 begin
-  FStack.Push(ntElement).SetAttribute(anName, Lexer.Token);
+  FStack.Push(ntElement);
   try
     inherited;
   finally
     FStack.Pop;
   end;
+end;
+
+procedure TPasSyntaxTreeBuilder.ExportsName;
+var
+  NamesNode: TSyntaxNode;
+begin
+  NamesNode := TSyntaxNode.Create(ntUnknown);
+  try
+    FStack.Push(NamesNode);
+    try
+      inherited;
+    finally
+      FStack.Pop;
+    end;
+
+    FStack.Peek.SetAttribute(anName, NodeListToString(NamesNode));
+  finally
+    NamesNode.Free;
+  end;
+end;
+
+procedure TPasSyntaxTreeBuilder.ExportsNameId;
+begin
+  FStack.AddChild(ntUnknown).SetAttribute(anName, Lexer.Token);
+  inherited;
 end;
 
 procedure TPasSyntaxTreeBuilder.Expression;
