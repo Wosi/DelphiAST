@@ -179,7 +179,8 @@ const
     ptInline,
     ptFinal,
     ptExperimental,
-    ptDispId
+    ptDispId,
+    ptCompilerProc
   ];
 
 type
@@ -1156,6 +1157,11 @@ begin
             FinalizationSection;
           Expected(ptEnd);
         end;
+      ptFinalization:
+        begin
+          FinalizationSection;
+          Expected(ptEnd);
+        end;
       ptBegin:
         begin
           CompoundStatement;
@@ -1805,7 +1811,7 @@ procedure TmwSimplePasPar.ObjectMethodDirective;
 begin
   while ExID in [ptAbstract, ptCdecl, ptDynamic, ptExport, ptExternal, ptFar,
     ptMessage, ptNear, ptOverload, ptPascal, ptRegister, ptSafeCall, ptStdCall,
-    ptVirtual, ptDeprecated, ptLibrary, ptPlatform, ptStatic, ptInline] do
+    ptVirtual, ptDeprecated, ptLibrary, ptPlatform, ptStatic, ptInline, ptCompilerProc] do
   begin
     ProceduralDirective;
     if TokenID = ptSemiColon then Semicolon;
@@ -1917,7 +1923,11 @@ begin
   case TokenID of
     ptConst:
       begin
-        ConstParameter;
+        Lexer.InitAhead;
+        if Lexer.AheadTokenID <> ptColon then
+          ConstParameter
+        else
+          ParameterFormal;
       end;
     ptIdentifier:
       case ExID of
@@ -1983,7 +1993,7 @@ end;
 procedure TmwSimplePasPar.ParameterFormal;
 begin
   case TokenID of
-    ptIdentifier:
+    ptIdentifier, ptConst:
       begin
         ParameterNameList;
         Expected(ptColon);
@@ -2019,7 +2029,10 @@ end;
 
 procedure TmwSimplePasPar.ParameterName;
 begin
-  Expected(ptIdentifier);
+  if Lexer.TokenID = ptConst then
+    NextToken
+  else
+    Expected(ptIdentifier);
 end;
 
 procedure TmwSimplePasPar.FormalParameterType;
@@ -2095,8 +2108,8 @@ begin
 
   while ExID in [ptAbstract, ptCdecl, ptDynamic, ptExport, ptExternal, ptDelayed, ptFar,
     ptMessage, ptNear, ptOverload, ptOverride, ptPascal, ptRegister,
-    ptReintroduce, ptSafeCall, ptStdCall, ptVirtual, ptLibrary,
-    ptPlatform, ptLocal, ptVarargs, ptAssembler, ptStatic, ptInline, ptForward,
+    ptReintroduce, ptSafeCall, ptStdCall, ptVirtual, ptLibrary, ptNoStackFrame,
+    ptPlatform, ptLocal, ptVarargs, ptAssembler, ptStatic, ptInline, ptCompilerProc, ptForward,
     ptExperimental, ptDeprecated] do
   begin
     case ExId of
@@ -2458,7 +2471,7 @@ end;
 procedure TmwSimplePasPar.AtExpression;
 begin
   ExpectedEx(ptAt);
-  Expression;
+  ExpressionList;
 end;
 
 procedure TmwSimplePasPar.RaiseStatement;
@@ -2542,7 +2555,7 @@ begin {removed ptIntegerConst jdj-Put back in for labels}
   while TokenID in [ptAddressOp, ptAsm, ptBegin, ptCase, ptDoubleAddressOp,
     ptFor, ptGoTo, ptIdentifier, ptIf, ptInherited, ptInline, ptIntegerConst,
     ptPointerSymbol, ptRaise, ptRoundOpen, ptRepeat, ptSemiColon, ptString,
-    ptTry, ptWhile, ptWith] do
+    ptTry, ptWhile, ptWith, ptCompilerProc] do
   begin
     Statement;
     Semicolon;
@@ -4077,7 +4090,7 @@ begin
   end;
   while TheTokenID in [ptAbstract, ptCdecl, ptDynamic, ptExport, ptExternal, ptFar,
     ptMessage, ptNear, ptOverload, ptOverride, ptPascal, ptRegister,
-    ptReintroduce, ptSafeCall, ptStdCall, ptVirtual, ptStatic, ptInline] do
+    ptReintroduce, ptSafeCall, ptStdCall, ptVirtual, ptStatic, ptInline, ptCompilerProc] do
   // DR 2001-11-14 no checking for deprecated etc. since it's captured by the typedecl
   begin
     if TokenID = ptSemiColon then Semicolon;
@@ -4263,7 +4276,14 @@ begin
     TypedConstant;
   end;
 
-  while (TokenID = ptComma) do
+  while (TokenID = ptSemiColon) do
+  begin
+    Semicolon;
+    if TokenId <> ptRoundClose then
+      RecordFieldConstant;
+  end;
+
+  while (TokenID in [ptComma]) do
   begin
     NextToken;
     TypedConstant;
@@ -4312,6 +4332,12 @@ begin
   Expected(ptEqual);
 
   Lexer.InitAhead;
+
+  if (Lexer.AheadTokenID = ptIdentifier) and SameText(Lexer.Token, 'specialize')  then
+  begin
+    NextToken;
+    AheadParse.NextToken;
+  end;  
 
   if TokenID = ptType then
   begin
@@ -4520,7 +4546,7 @@ begin
         end;
       end;
     ptSquareOpen:
-      ConstantExpression;
+      ConstantExpression;   
   else
     begin
       ConstantExpression;
@@ -4717,7 +4743,7 @@ begin
       begin
         DirectiveBinding;
       end;
-    ptAssembler:
+    ptAssembler, ptNoStackFrame, ptCompilerProc:
       begin
         NextToken;
       end;
@@ -4766,10 +4792,26 @@ begin
   end;
   if TokenID = ptSemiColon then Semicolon;
 
+  if TokenID = ptSquareOpen then
+  begin
+    while(TokenID <> ptSquareClose) do
+      NextToken;
+    Expected(ptSquareClose);  
+    Semicolon;
+  end;
+
+  if GenID in [ptPublic] then
+  begin
+    NextToken;
+    NextToken;
+    NextToken;
+    Semicolon;
+  end;  
+
   //TODO: Add FINAL
   while ExID in [ptAbstract, ptCdecl, ptDynamic, ptExport, ptExternal, ptFar,
     ptMessage, ptNear, ptOverload, ptOverride, ptPascal, ptRegister,
-    ptReintroduce, ptSafeCall, ptStdCall, ptVirtual,
+    ptReintroduce, ptSafeCall, ptStdCall, ptVirtual, ptCompilerProc,
     ptDeprecated, ptLibrary, ptPlatform, ptLocal, ptVarargs,
     ptStatic, ptInline, ptAssembler, ptForward, ptDelayed] do
   begin
@@ -4832,6 +4874,14 @@ begin
     begin
       VarDeclaration;
       Semicolon;
+
+      if GenID in [ptPublic, ptExternal] then
+      begin
+        NextToken;
+        NextToken;
+        NextToken;
+        Semicolon;
+      end;  
     end;
   end;
 end;
@@ -4839,7 +4889,6 @@ end;
 procedure TmwSimplePasPar.TypeSection;
 begin
   Expected(ptType);
-
   while (TokenID = ptIdentifier) or (Lexer.TokenID = ptSquareOpen) do
   begin
     if TokenID = ptSquareOpen then
@@ -4848,12 +4897,17 @@ begin
     begin
       InitAhead;
       AheadParse.NextToken;
+      
+      if (AheadParse.TokenID = ptIdentifier) and SameText(Lexer.Token, 'generic')  then
+      begin
+        NextToken;
+        AheadParse.NextToken;
+      end;
+
       if AheadParse.TokenID = ptLower then
         AheadParse.TypeParams;
-
       if AheadParse.TokenID <> ptEqual then
         Break;
-
       TypeDeclaration;
       if TokenID = ptEqual then
         TypedConstant;
@@ -5632,7 +5686,14 @@ begin
       AttributeTargetSpecifier;
     AttributeList;
   end;
+  
+  while Lexer.TokenID <> ptSquareClose do
+    NextToken;
+
   Expected(ptSquareClose);
+
+  if Lexer.TokenID = ptSemiColon then
+    NextToken;
 end;
 
 procedure TmwSimplePasPar.AttributeTargetSpecifier;

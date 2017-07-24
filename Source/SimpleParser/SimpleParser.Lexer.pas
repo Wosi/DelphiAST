@@ -1053,7 +1053,8 @@ function TmwBasePasLex.Func100: TptTokenKind;
 begin
   Result := ptIdentifier;
   if KeyComp('Automated') then FExID := ptAutomated else
-    if KeyComp('Smallint') then FExID := ptSmallint;
+    if KeyComp('Smallint') then FExID := ptSmallint else
+      if KeyComp('Constref') then Result := ptConst;
 end;
 
 function TmwBasePasLex.Func101: TptTokenKind;
@@ -1129,7 +1130,8 @@ end;
 function TmwBasePasLex.Func126: TptTokenKind;
 begin
   Result := ptIdentifier;
-  if KeyComp('Implements') then FExID := ptImplements;
+  if KeyComp('Implements') then FExID := ptImplements else
+    if KeyComp('NoStackFrame') then FExID := ptNoStackFrame;
 end;
 
 function TmwBasePasLex.Func127: TptTokenKind;
@@ -1189,7 +1191,8 @@ end;
 function TmwBasePasLex.Func143: TptTokenKind;
 begin
   Result := ptIdentifier;
-  if KeyComp('Destructor') then Result := ptDestructor;
+  if KeyComp('Destructor') then Result := ptDestructor else
+    if KeyComp('compilerproc') then FExID := ptCompilerProc;
 end;
 
 function TmwBasePasLex.Func166: TptTokenKind;
@@ -1835,8 +1838,18 @@ end;
 
 procedure TmwBasePasLex.MinusProc;
 begin
-  Inc(FBuffer.Run);
-  FTokenID := ptMinus;
+  case FBuffer.Buf[FBuffer.Run + 1] of
+    '=':
+      begin
+        Inc(FBuffer.Run, 2);
+        FTokenID := ptAssign;
+      end;
+  else
+    begin
+      Inc(FBuffer.Run);
+      FTokenID := ptMinus;
+    end;
+  end;
 end;
 
 procedure TmwBasePasLex.NullProc;
@@ -1873,8 +1886,18 @@ end;
 
 procedure TmwBasePasLex.PlusProc;
 begin
-  Inc(FBuffer.Run);
-  FTokenID := ptPlus;
+  case FBuffer.Buf[FBuffer.Run + 1] of
+    '=':
+      begin
+        Inc(FBuffer.Run, 2);
+        FTokenID := ptAssign;
+      end;
+  else
+    begin
+      Inc(FBuffer.Run);
+      FTokenID := ptPlus;
+    end;
+  end;
 end;
 
 procedure TmwBasePasLex.PointerSymbolProc;
@@ -2138,6 +2161,11 @@ begin
           FOnComment(Self, CommentText);
         end;
       end;
+    '=':
+      begin
+        Inc(FBuffer.Run, 2);
+        FTokenID := ptAssign;
+      end;    
   else
     begin
       Inc(FBuffer.Run);
@@ -2168,8 +2196,18 @@ end;
 
 procedure TmwBasePasLex.StarProc;
 begin
-  Inc(FBuffer.Run);
-  FTokenID := ptStar;
+  case FBuffer.Buf[FBuffer.Run + 1] of
+    '=':
+      begin
+        Inc(FBuffer.Run, 2);
+        FTokenID := ptAssign;
+      end;
+  else
+    begin
+      Inc(FBuffer.Run);
+      FTokenID := ptStar;
+    end;
+  end;
 end;
 
 procedure TmwBasePasLex.StringProc;
