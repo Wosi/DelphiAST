@@ -39,9 +39,9 @@ type
       {$ENDIF}      
     Type
       TBaseMesure =
-        {$IFDEF WINDOWS}
+      {$IFNDEF LINUX}
            Int64;
-        {$ENDIF WINDOWS}
+      {$ENDIF LINUX}
       {$IFDEF LINUX}
            TTimeSpec;
       {$ENDIF LINUX}
