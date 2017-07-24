@@ -54,11 +54,7 @@ unit SimpleParser.Lexer;
 interface
 
 uses
-  SysUtils, Classes, Character, 
-  {$IFDEF FPC}
-    Generics.Collections, 
-  {$ENDIF}
-  SimpleParser.Lexer.Types;
+  SysUtils, Classes, Character, Generics.Collections, SimpleParser.Lexer.Types;
 
 var
   Identifiers: array[#0..#127] of ByteBool;
@@ -117,6 +113,7 @@ type
     FAsmCode: Boolean;
     FDefines: TArray<string>;
     FDefineStack: Integer;
+    FDefinedSnippets: TDictionary<String, String>;
     FTopDefineRec: PDefineRec;
     FUseDefines: Boolean;
     FScopedEnums: Boolean;
@@ -282,6 +279,7 @@ type
     function HashValue(AChar: Char): Integer;
     function EvaluateConditionalExpression(const AParams: String): Boolean;
     procedure IncludeFile;
+    procedure InjectContent(const Content, FileName: String);
     function GetIncludeFileNameFromToken(const IncludeToken: string): string;
     function GetOrigin: string;
     function GetRunPos: Integer;
@@ -422,7 +420,8 @@ begin
     Frame := FTopDefineRec;
     FTopDefineRec := Frame^.Next;
     Dispose(Frame);
-  end;
+  end;  
+  FDefinedSnippets.Clear;
   FDefines := nil;
   FDefineStack := 0;
 end;
@@ -430,10 +429,13 @@ end;
 procedure TmwBasePasLex.CloneDefinesFrom(ALexer: TmwBasePasLex);
 var
   Frame, LastFrame, SourceFrame: PDefineRec;
+  SnippetPair: TPair<String, String>;
 begin
   ClearDefines;
   FDefines := Copy(ALexer.FDefines);
   FDefineStack := ALexer.FDefineStack;
+  for SnippetPair in Alexer.FDefinedSnippets do
+    FDefinedSnippets.AddOrSetValue(SnippetPair.Key, SnippetPair.Value);
 
   Frame := nil;
   LastFrame := nil;
@@ -1229,12 +1231,19 @@ end;
 function TmwBasePasLex.IdentKind: TptTokenKind;
 var
   HashKey: Integer;
+  DefinedSnippet: String;
 begin
   HashKey := KeyHash;
   if HashKey < 192 then
     Result := FIdentFuncTable[HashKey]
   else
     Result := ptIdentifier;
+
+  if (Result = ptIdentifier) and FDefinedSnippets.TryGetValue(Token, DefinedSnippet) then
+  begin
+    InjectContent(DefinedSnippet, 'DEFINE:' + Token);
+    Result := IdentKind;    
+  end;
 end;
 
 procedure TmwBasePasLex.MakeMethodTables;
@@ -1295,6 +1304,7 @@ begin
   FUseDefines := True;
   FScopedEnums := False;
   FTopDefineRec := nil;
+  FDefinedSnippets := TDictionary<String, String>.Create;
   ClearDefines;
 
   New(FBuffer);
@@ -1309,6 +1319,7 @@ begin
   Dispose(FBuffer);
 
   ClearDefines; //If we don't do this, we get a memory leak
+  FDefinedSnippets.Free;
   inherited Destroy;
 end;
 
@@ -1370,12 +1381,21 @@ begin
 end;
 
 procedure TmwBasePasLex.AddDefine(const ADefine: string);
-var
-  len: Integer;
+var 
+  len, AssignmentPos: Integer; 
+  DefineName, DefineValue: String;
 begin
   len := Length(FDefines);
   SetLength(FDefines, len + 1);
   FDefines[len] := ADefine;
+
+  AssignmentPos := Pos(':=', ADefine);
+  if AssignmentPos > 0 then
+  begin
+    DefineName := Trim(MidStr(ADefine, 1, AssignmentPos - 1));
+    DefineValue := Trim(MidStr(ADefine, AssignmentPos + 2, Length(ADefine)));
+    FDefinedSnippets.AddOrSetValue(DefineName, DefineValue);
+  end;
 end;
 
 procedure TmwBasePasLex.AddressOpProc;
@@ -2483,19 +2503,24 @@ end;
 procedure TmwBasePasLex.IncludeFile;
 var
   IncludeFileName, IncludeDirective, Content: string;
-  NewBuffer: PBufferRec;
 begin
   IncludeDirective := Token;
   IncludeFileName := GetIncludeFileNameFromToken(IncludeDirective);
   Content := FIncludeHandler.GetIncludeFileContent(IncludeFileName) + #13#10;
+  InjectContent(Content, IncludeFileName);
+end;
 
+procedure TmwBasePasLex.InjectContent(const Content: String; const FileName: String);
+var
+  NewBuffer: PBufferRec;
+begin
   New(NewBuffer);
   NewBuffer.SharedBuffer := False;
   NewBuffer.Next := FBuffer;
   NewBuffer.LineNumber := 0;
   NewBuffer.LinePos := 0;
   NewBuffer.Run := 0;
-  NewBuffer.FileName := IncludeFileName;
+  NewBuffer.FileName := FileName;
   GetMem(NewBuffer.Buf, (Length(Content) + 1) * SizeOf(Char));
   StrPCopy(NewBuffer.Buf, Content);
   NewBuffer.Buf[Length(Content)] := #0;
