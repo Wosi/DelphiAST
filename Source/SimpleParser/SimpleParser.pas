@@ -635,11 +635,9 @@ begin
     Semicolon;
   end;
 
-  if ExID = ptDeprecated then
-  begin
-    DirectiveDeprecated;
-    Semicolon;
-  end;  
+  TypeDirective;
+  if TokenID = ptSemiColon then
+    NextToken;  
 end;
 
 procedure TmwSimplePasPar.ObjectPropertySpecifiers;
@@ -3911,11 +3909,9 @@ begin
     Semicolon;
   end;
 
-  if ExID = ptDeprecated then
-  begin
-    DirectiveDeprecated;
-    Semicolon;
-  end;    
+  TypeDirective;
+  if TokenID = ptSemiColon then
+    NextToken;
 end;
 
 procedure TmwSimplePasPar.PropertyName;
