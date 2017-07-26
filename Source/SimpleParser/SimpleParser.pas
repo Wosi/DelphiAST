@@ -629,13 +629,17 @@ begin
       end;
   end;
   ObjectPropertySpecifiers;
-  case ExID of
-    ptDefault:
-      begin
-        PropertyDefault;
-        Semicolon;
-      end;
+  if ExID = ptDefault then
+  begin
+    PropertyDefault;
+    Semicolon;
   end;
+
+  if ExID = ptDeprecated then
+  begin
+    DirectiveDeprecated;
+    Semicolon;
+  end;  
 end;
 
 procedure TmwSimplePasPar.ObjectPropertySpecifiers;
@@ -3900,13 +3904,18 @@ begin
       end;
   end;
   PropertySpecifiers;
-  case ExID of
-    ptDefault:
-      begin
-        PropertyDefault;
-        Semicolon;
-      end;
+ 
+  if ExID = ptDefault then
+  begin
+    PropertyDefault;
+    Semicolon;
   end;
+
+  if ExID = ptDeprecated then
+  begin
+    DirectiveDeprecated;
+    Semicolon;
+  end;    
 end;
 
 procedure TmwSimplePasPar.PropertyName;
