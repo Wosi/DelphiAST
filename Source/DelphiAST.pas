@@ -262,7 +262,7 @@ type
     destructor Destroy; override;
 
     function Run(SourceStream: TStream): TSyntaxNode; reintroduce; overload; virtual;
-    class function Run(const FileName: string; InterfaceOnly: Boolean = False;
+    class function Run(const FileName: string; ParseMode: TParseMode = pmFull;
       IncludeHandler: IIncludeHandler = nil;
       OnHandleString: TStringEvent = nil): TSyntaxNode; reintroduce; overload; static;
 
@@ -2054,7 +2054,7 @@ begin
 end;
 
 class function TPasSyntaxTreeBuilder.Run(const FileName: string;
-  InterfaceOnly: Boolean; IncludeHandler: IIncludeHandler;
+  ParseMode: TParseMode; IncludeHandler: IIncludeHandler;
   OnHandleString: TStringEvent): TSyntaxNode;
 var
   Stream: TStringStream;
@@ -2064,7 +2064,7 @@ begin
   try
     Stream.LoadFromFile(FileName);
     Builder := TPasSyntaxTreeBuilder.Create;
-    Builder.InterfaceOnly := InterfaceOnly;
+    Builder.ParseMode := ParseMode;
     Builder.OnHandleString := OnHandleString;
     try
       Builder.InitDefinesDefinedByCompiler;

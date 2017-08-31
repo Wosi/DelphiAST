@@ -33,7 +33,7 @@ uses
   {$IFNDEF FPC}
     StringUsageLogging, FastMM4,
   {$ENDIF}
-  StringPool,
+  StringPool, SimpleParser,
   DelphiAST, DelphiAST.Writer, DelphiAST.Classes,
   SimpleParser.Lexer.Types, IOUtils, Diagnostics;
 
@@ -93,7 +93,7 @@ begin
     memused := MemoryUsed;
     sw := TStopwatch.StartNew;
     try
-      SyntaxTree := TPasSyntaxTreeBuilder.Run(FileName, False,
+      SyntaxTree := TPasSyntaxTreeBuilder.Run(FileName, pmFull,
         TIncludeHandler.Create(ExtractFilePath(FileName)), OnHandleString);
     finally
       if UseStringInterning then

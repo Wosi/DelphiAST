@@ -38,7 +38,7 @@ var
 implementation
 
 uses
-  FileCtrl, IOUtils, DelphiAST, DelphiAST.Classes;
+  FileCtrl, IOUtils, DelphiAST, DelphiAST.Classes, SimpleParser;
 
 {$R *.dfm}
 
@@ -56,7 +56,7 @@ begin
   for FileName in TDirectory.GetFiles(Path, '*.pas', TSearchOption.soAllDirectories) do
   begin
     try
-      SyntaxTree := TPasSyntaxTreeBuilder.Run(FileName, False, TIncludeHandler.Create(Path));
+      SyntaxTree := TPasSyntaxTreeBuilder.Run(FileName, pmFull, TIncludeHandler.Create(Path));
       try
         memLog.Lines.Add('OK:     ' + FileName);
       finally

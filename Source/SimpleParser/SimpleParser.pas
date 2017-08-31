@@ -194,11 +194,13 @@ type
     property PosXY: TTokenPoint read FPosXY write FPosXY;
   end;
 
+  TParseMode = (pmFull, pmInterfaceOnly, pmStopAfterImplmentationUses);
+
   TmwSimplePasPar = class(TObject)
   private
     FOnMessage: TMessageEvent;
     FLexer: TmwPasLex;
-    FInterfaceOnly: Boolean;
+    FParseMode: TParseMode;
     FLastNoJunkPos: Integer;
     FLastNoJunkLen: Integer;
     AheadParse: TmwSimplePasPar;
@@ -359,6 +361,7 @@ type
     procedure IdentifierList; virtual;
     procedure IfStatement; virtual;
     procedure ImplementationSection; virtual;
+    procedure ImplementationSectionAfterUses;
     procedure ImplementsSpecifier; virtual;
     procedure IncludeFile; virtual;
     procedure IndexSpecifier; virtual;
@@ -506,6 +509,7 @@ type
     procedure TypeSection; virtual;
     procedure UnaryMinus; virtual;
     procedure UnitFile; virtual;
+    procedure UnitFooter;
     procedure UnitId; virtual;
     procedure UnitName; virtual;
     procedure UsedUnitName; virtual;
@@ -575,7 +579,7 @@ type
     procedure RemoveDefine(const ADefine: string);
     function IsDefined(const ADefine: string): Boolean;
 
-    property InterfaceOnly: Boolean read FInterfaceOnly write FInterfaceOnly;
+    property ParseMode: TParseMode read FParseMode write FParseMode;
     property Lexer: TmwPasLex read FLexer;
     property OnComment: TCommentEvent read GetOnComment write SetOnComment;
     property OnMessage: TMessageEvent read FOnMessage write FOnMessage;
@@ -1128,7 +1132,7 @@ begin
     IdentifierList;
     Expected(ptRoundClose);
   end;
-  if not InterfaceOnly then
+  if FParseMode <> pmInterfaceOnly then
   begin
     Semicolon;
     ProgramBlock;
@@ -1149,34 +1153,40 @@ begin
 
   Semicolon;
   InterfaceSection;
-  if not InterfaceOnly then
+  if FParseMode <> pmInterfaceOnly then
   begin
     ImplementationSection;
-    case TokenID of
-      ptInitialization:
-        begin
-          InitializationSection;
-          if TokenID = ptFinalization then
-            FinalizationSection;
-          Expected(ptEnd);
-        end;
-      ptFinalization:
-        begin
-          FinalizationSection;
-          Expected(ptEnd);
-        end;
-      ptBegin:
-        begin
-          CompoundStatement;
-        end;
-      ptEnd:
-        begin
-          NextToken;
-        end;
-    end;
-
-    Expected(ptPoint);
+    if FParseMode <> pmStopAfterImplmentationUses then
+      UnitFooter;
   end;
+end;
+
+procedure TmwSimplePasPar.UnitFooter;
+begin
+  case TokenID of
+    ptInitialization:
+      begin
+        InitializationSection;
+        if TokenID = ptFinalization then
+          FinalizationSection;
+        Expected(ptEnd);
+      end;
+    ptFinalization:
+      begin
+        FinalizationSection;
+        Expected(ptEnd);
+      end;
+    ptBegin:
+      begin
+        CompoundStatement;
+      end;
+    ptEnd:
+      begin
+        NextToken;
+      end;
+  end;
+
+  Expected(ptPoint);  
 end;
 
 procedure TmwSimplePasPar.ProgramBlock;
@@ -5208,12 +5218,19 @@ begin
   begin
     UsesClause;
   end;
+
+  if FParseMode <> pmStopAfterImplmentationUses then
+    ImplementationSectionAfterUses;
+end;
+
+procedure TmwSimplePasPar.ImplementationSectionAfterUses;
+begin
   while TokenID in [ptClass, ptConst, ptConstructor, ptDestructor, ptFunction,
     ptLabel, ptProcedure, ptResourceString, ptThreadVar, ptType, ptVar,
     ptExports, ptSquareOpen] do
   begin
     DeclarationSection;
-  end;
+  end;  
 end;
 
 procedure TmwSimplePasPar.InterfaceSection;
