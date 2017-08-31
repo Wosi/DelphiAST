@@ -37,6 +37,7 @@ type
     FChildNodes: TArray<TSyntaxNode>;
     FTyp: TSyntaxNodeType;
     FParentNode: TSyntaxNode;
+    function GetChildNodes: TArray<TSyntaxNode>; virtual;
   public
     constructor Create(Typ: TSyntaxNodeType);
     destructor Destroy; override;
@@ -54,10 +55,10 @@ type
     procedure DeleteChild(Node: TSyntaxNode);
     procedure ExtractChild(Node: TSyntaxNode);
 
-    function FindNode(Typ: TSyntaxNodeType): TSyntaxNode;
+    function FindNode(Typ: TSyntaxNodeType): TSyntaxNode; virtual;
 
     property Attributes: TArray<TAttributeEntry> read FAttributes;
-    property ChildNodes: TArray<TSyntaxNode> read FChildNodes;
+    property ChildNodes: TArray<TSyntaxNode> read GetChildNodes;
     property HasAttributes: Boolean read GetHasAttributes;
     property HasChildren: Boolean read GetHasChildren;
     property Typ: TSyntaxNodeType read FTyp;
@@ -445,6 +446,11 @@ begin
   for i := 0 to High(FChildNodes) do
     FreeAndNil(FChildNodes[i]);
   inherited;
+end;
+
+function TSyntaxNode.GetChildNodes: TArray<TSyntaxNode>;
+begin
+  Result := FChildNodes;
 end;
 
 function TSyntaxNode.FindNode(Typ: TSyntaxNodeType): TSyntaxNode;
