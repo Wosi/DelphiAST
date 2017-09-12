@@ -141,7 +141,7 @@ Known Issues:
 -----------------------------------------------------------------------------}
 unit SimpleParser;
 
-{$IFDEF FPC}{$MODE DELPHI}{$ENDIF}  
+{$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
 
 interface
 
@@ -271,7 +271,7 @@ type
     procedure ClassMethodResolution; virtual;
     procedure ClassProcedureHeading; virtual;
     procedure ClassClass; virtual;
-    procedure ClassConstraint; virtual; 
+    procedure ClassConstraint; virtual;
     procedure ClassMethod; virtual;
     procedure ClassProperty; virtual;
     procedure ClassReferenceType; virtual;
@@ -289,7 +289,7 @@ type
     procedure ConstantValue; virtual;
     procedure ConstantValueTyped; virtual;
     procedure ConstParameter; virtual;
-    procedure ConstructorConstraint; virtual; 
+    procedure ConstructorConstraint; virtual;
     procedure ConstructorHeading; virtual;
     procedure ConstructorName; virtual;
     procedure ConstSection; virtual;
@@ -439,7 +439,7 @@ type
     procedure RealIdentifier; virtual;
     procedure RealType; virtual;
     procedure RecordConstant; virtual;
-    procedure RecordConstraint; virtual; 
+    procedure RecordConstraint; virtual;
     procedure RecordFieldConstant; virtual;
     procedure RecordType; virtual;
     procedure RecordVariant; virtual;
@@ -642,7 +642,7 @@ begin
 
   TypeDirective;
   if TokenID = ptSemiColon then
-    NextToken;  
+    NextToken;
 end;
 
 procedure TmwSimplePasPar.ObjectPropertySpecifiers;
@@ -1186,7 +1186,7 @@ begin
       end;
   end;
 
-  Expected(ptPoint);  
+  Expected(ptPoint);
 end;
 
 procedure TmwSimplePasPar.ProgramBlock;
@@ -1859,7 +1859,7 @@ begin
     ptAbstract:
       begin
         NextToken;
-      end;  
+      end;
     ptVirtual:
       begin
         NextToken;
@@ -2050,7 +2050,7 @@ end;
 
 procedure TmwSimplePasPar.FormalParameterType;
 begin
-  if TokenID = ptArray then 
+  if TokenID = ptArray then
     StructuredType
   else
     TypeID;
@@ -2074,7 +2074,7 @@ begin
   else
     begin
       Expected(ptColon);
-      ReturnType; 
+      ReturnType;
       FunctionProcedureBlock;
     end;
   end;
@@ -2145,7 +2145,7 @@ begin
   end;
 
   if HasBlock then
-  begin 
+  begin
     case TokenID of
       ptAsm:
         begin
@@ -3734,7 +3734,7 @@ begin
   IsStrict := ExID = ptStrict;
   if IsStrict then
     ExpectedEx(ptStrict);
-      
+
   while ExID in [ptAutomated, ptPrivate, ptProtected, ptPublic, ptPublished] do
   begin
     Lexer.InitAhead;
@@ -3918,7 +3918,7 @@ begin
       end;
   end;
   PropertySpecifiers;
- 
+
   if ExID = ptDefault then
   begin
     PropertyDefault;
@@ -4358,7 +4358,7 @@ begin
   begin
     NextToken;
     AheadParse.NextToken;
-  end;  
+  end;
 
   if TokenID = ptType then
   begin
@@ -4459,7 +4459,7 @@ begin
 end;
 
 procedure TmwSimplePasPar.TypeKind;
-begin 
+begin
   case TokenID of
     ptAsciiChar, ptFloat, ptIntegerConst, ptMinus, ptNil, ptPlus, ptStringConst, ptConst:
       begin
@@ -4567,7 +4567,7 @@ begin
         end;
       end;
     ptSquareOpen:
-      ConstantExpression;   
+      ConstantExpression;
   else
     begin
       ConstantExpression;
@@ -4725,7 +4725,7 @@ begin
   else
     begin
       SynError(InvalidProcedureDeclarationSection);
-    end; 
+    end;
   end;
 end;
 
@@ -4815,9 +4815,9 @@ begin
 
   if TokenID = ptSquareOpen then
   begin
-    while(TokenID <> ptSquareClose) do
+    while not (TokenID in [ptSquareClose, ptNull]) do
       NextToken;
-    Expected(ptSquareClose);  
+    Expected(ptSquareClose);
     Semicolon;
   end;
 
@@ -4827,7 +4827,7 @@ begin
     NextToken;
     NextToken;
     Semicolon;
-  end;  
+  end;
 
   //TODO: Add FINAL
   while ExID in [ptAbstract, ptCdecl, ptDynamic, ptExport, ptExternal, ptFar,
@@ -4902,7 +4902,7 @@ begin
         NextToken;
         NextToken;
         Semicolon;
-      end;  
+      end;
     end;
   end;
 end;
@@ -4918,7 +4918,7 @@ begin
     begin
       InitAhead;
       AheadParse.NextToken;
-      
+
       if (AheadParse.TokenID = ptIdentifier) and SameText(Lexer.Token, 'generic')  then
       begin
         NextToken;
@@ -5230,7 +5230,7 @@ begin
     ptExports, ptSquareOpen] do
   begin
     DeclarationSection;
-  end;  
+  end;
 end;
 
 procedure TmwSimplePasPar.InterfaceSection;
@@ -5714,8 +5714,8 @@ begin
       AttributeTargetSpecifier;
     AttributeList;
   end;
-  
-  while Lexer.TokenID <> ptSquareClose do
+
+  while not (Lexer.TokenID in [ptSquareClose, ptNull]) do
     NextToken;
 
   Expected(ptSquareClose);
