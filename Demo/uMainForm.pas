@@ -9,14 +9,14 @@ uses
   Dialogs, Menus, StdCtrls, ComCtrls;
 
 type
-  TMainForm = class(TForm)   
+  TMainForm = class(TForm)
     OutputMemo: TMemo;
     MainMenu: TMainMenu;
     OpenDelphiUnit1: TMenuItem;
     OpenDialog: TOpenDialog;
-    StatusBar: TStatusBar;    
+    StatusBar: TStatusBar;
     CheckBox1: TCheckBox;
-    procedure OpenDelphiUnit1Click(Sender: TObject);  
+    procedure OpenDelphiUnit1Click(Sender: TObject);
   private
     procedure UpdateStatusBarText(const StatusText: string);
   end;
@@ -49,7 +49,7 @@ type
     FPath: string;
   public
     constructor Create(const Path: string);
-    function GetIncludeFileContent(const FileName: string): string;
+    function GetIncludeFileContent(var FileName: string): string;
   end;
 
 {$IFNDEF FPC}
@@ -118,7 +118,7 @@ end;
 procedure TMainForm.OpenDelphiUnit1Click(Sender: TObject);
 var
   StatusText: string;
-begin 
+begin
   if OpenDialog.Execute then
   begin
     OutputMemo.Lines.Text := Parse(OpenDialog.FileName, StatusText, CheckBox1.Checked);
@@ -134,7 +134,7 @@ begin
   FPath := Path;
 end;
 
-function TIncludeHandler.GetIncludeFileContent(const FileName: string): string;
+function TIncludeHandler.GetIncludeFileContent(var FileName: string): string;
 var
   FileContent: TStringList;
 begin

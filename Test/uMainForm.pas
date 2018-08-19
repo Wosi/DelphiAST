@@ -29,7 +29,7 @@ type
     FPath: string;
   public
     constructor Create(const Path: string);
-    function GetIncludeFileContent(const FileName: string): string;
+    function GetIncludeFileContent(var FileName: string): string;
   end;
 
 var
@@ -82,7 +82,7 @@ begin
   FPath := Path;
 end;
 
-function TIncludeHandler.GetIncludeFileContent(const FileName: string): string;
+function TIncludeHandler.GetIncludeFileContent(var FileName: string): string;
 var
   FileContent: TStringList;
 begin
