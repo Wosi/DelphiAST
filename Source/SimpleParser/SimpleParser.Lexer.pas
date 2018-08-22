@@ -54,7 +54,11 @@ unit SimpleParser.Lexer;
 interface
 
 uses
-  SysUtils, Classes, Character, Generics.Collections, SimpleParser.Lexer.Types;
+  SysUtils, Classes, Character,
+  {$IFDEF FPC}
+    Generics.Collections,
+  {$ENDIF}
+  SimpleParser.Lexer.Types;
 
 var
   Identifiers: array[#0..#127] of ByteBool;
@@ -119,7 +123,7 @@ type
     FScopedEnums: Boolean;
     FIncludeHandler: IIncludeHandler;
     FOnComment: TCommentEvent;
-    
+
     function KeyHash: Integer;
     function KeyComp(const aKey: string): Boolean;
     function Func9: tptTokenKind;
@@ -420,7 +424,7 @@ begin
     Frame := FTopDefineRec;
     FTopDefineRec := Frame^.Next;
     Dispose(Frame);
-  end;  
+  end;
   FDefinedSnippets.Clear;
   FDefines := nil;
   FDefineStack := 0;
@@ -1242,7 +1246,7 @@ begin
   if (Result = ptIdentifier) and FDefinedSnippets.TryGetValue(Token, DefinedSnippet) then
   begin
     InjectContent(DefinedSnippet, 'DEFINE:' + Token);
-    Result := IdentKind;    
+    Result := IdentKind;
   end;
 end;
 
@@ -1381,8 +1385,8 @@ begin
 end;
 
 procedure TmwBasePasLex.AddDefine(const ADefine: string);
-var 
-  len, AssignmentPos: Integer; 
+var
+  len, AssignmentPos: Integer;
   DefineName, DefineValue: String;
 begin
   len := Length(FDefines);
@@ -1633,7 +1637,7 @@ begin
     PtScopedEnumsDirect:
       begin
         UpdateScopedEnums;
-      end;      
+      end;
     PtUndefDirect:
       begin
         if FUseDefines and (FDefineStack = 0) then
@@ -1897,8 +1901,11 @@ begin
       '.':
         if FBuffer.Buf[FBuffer.Run + 1] = '.' then
           Break
-        else
+        else if CharInSet(FBuffer.Buf[FBuffer.Run + 1], ['0'..'9']) then
           FTokenID := ptFloat
+        else
+          Break;
+
     end;
     Inc(FBuffer.Run);
   end;
@@ -2139,7 +2146,7 @@ begin
     PtScopedEnumsDirect:
       begin
         UpdateScopedEnums;
-      end;      
+      end;
     PtUndefDirect:
       begin
         if Assigned(FOnUnDefDirect) then
@@ -2185,7 +2192,7 @@ begin
       begin
         Inc(FBuffer.Run, 2);
         FTokenID := ptAssign;
-      end;    
+      end;
   else
     begin
       Inc(FBuffer.Run);
@@ -2435,7 +2442,7 @@ begin
     134:
       if KeyComp('SCOPEDENUMS') then
         Result := ptScopedEnumsDirect else
-        Result := ptCompDirect;        
+        Result := ptCompDirect;
   else Result := ptCompDirect;
   end;
   FTokenPos := TempPos;
