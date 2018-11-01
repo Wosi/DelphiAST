@@ -179,8 +179,10 @@ const
     ptInline,
     ptFinal,
     ptExperimental,
+    ptExternal,
     ptDispId,
-    ptCompilerProc
+    ptCompilerProc,
+    ptVarargs
   ];
 
 type
@@ -1737,6 +1739,8 @@ begin
   begin
     if ExID = ptDispId then
       DispIDSpecifier
+    else if ExID = ptExternal then
+      ExternalDirective
     else
       ProceduralDirective;
     if TokenId = ptSemicolon then
@@ -1823,7 +1827,7 @@ end;
 procedure TmwSimplePasPar.ObjectMethodDirective;
 begin
   while ExID in [ptAbstract, ptCdecl, ptDynamic, ptExport, ptExternal, ptFar,
-    ptMessage, ptNear, ptOverload, ptPascal, ptRegister, ptSafeCall, ptStdCall,
+    ptMessage, ptNear, ptOverload, ptPascal, ptRegister, ptSafeCall, ptStdCall, ptVarargs,
     ptVirtual, ptDeprecated, ptLibrary, ptPlatform, ptStatic, ptInline, ptCompilerProc] do
   begin
     ProceduralDirective;
@@ -1881,6 +1885,10 @@ begin
         NextToken;
       end;
     ptReintroduce:
+      begin
+        NextToken;
+      end;
+    ptVarargs:
       begin
         NextToken;
       end;
@@ -2118,7 +2126,6 @@ var
 begin
   HasBlock := True;
   if TokenID = ptSemiColon then Semicolon;
-
   while ExID in [ptAbstract, ptCdecl, ptDynamic, ptExport, ptExternal, ptDelayed, ptFar,
     ptMessage, ptNear, ptOverload, ptOverride, ptPascal, ptRegister,
     ptReintroduce, ptSafeCall, ptStdCall, ptVirtual, ptLibrary, ptNoStackFrame,
@@ -3675,6 +3682,9 @@ begin
         if Lexer.ExID = ptAbstract then
           Expected(ptIdentifier);
 
+        if Lexer.ExID = ptExternal then
+          ExternalDirective;
+
         if Lexer.ExID = ptHelper then
           ClassHelper;
       end;
@@ -4119,7 +4129,7 @@ begin
     TheTokenID := ExID;
   end;
   while TheTokenID in [ptAbstract, ptCdecl, ptDynamic, ptExport, ptExternal, ptFar,
-    ptMessage, ptNear, ptOverload, ptOverride, ptPascal, ptRegister,
+    ptMessage, ptNear, ptOverload, ptOverride, ptPascal, ptRegister, ptVarargs,
     ptReintroduce, ptSafeCall, ptStdCall, ptVirtual, ptStatic, ptInline, ptCompilerProc] do
   // DR 2001-11-14 no checking for deprecated etc. since it's captured by the typedecl
   begin
@@ -4904,7 +4914,6 @@ begin
     begin
       VarDeclaration;
       Semicolon;
-
       if GenID in [ptPublic, ptExternal] then
       begin
         NextToken;
@@ -5629,6 +5638,21 @@ end;
 
 procedure TmwSimplePasPar.TypeDirective;
 begin
+  if TokenID = ptSemiColon then
+  begin
+    Lexer.AheadNext;
+    InitAhead;
+    AheadParse.NextToken;
+    if AheadParse.Lexer.ExID = ptExternal then
+    begin
+      Semicolon;
+      ExternalDirective;
+    end;
+  end;
+
+  if ExID = ptExternal then
+    ExternalDirective;
+
   while GenID in [ptDeprecated, ptLibrary, ptPlatform, ptExperimental] do
     case GenID of
       ptDeprecated:   DirectiveDeprecated;
