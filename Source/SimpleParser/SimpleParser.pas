@@ -371,7 +371,10 @@ type
     procedure InheritedStatement; virtual;
     procedure InheritedVariableReference; virtual;
     procedure InitializationSection; virtual;
+    procedure InlineConstSection; virtual;
     procedure InlineStatement; virtual;
+    procedure InlineVarDeclaration; virtual;
+    procedure InlineVarSection; virtual;
     procedure InParameter; virtual;
     procedure InterfaceDeclaration; virtual;
     procedure InterfaceForward; virtual;
@@ -2227,7 +2230,14 @@ end;
 procedure TmwSimplePasPar.ForStatement;
 begin
   Expected(ptFor);
-  QualifiedIdentifier;
+  if TokenID = ptVar then
+  begin
+    NextToken;
+    InlineVarDeclaration;
+  end
+  else
+    QualifiedIdentifier;
+
   if Lexer.TokenID = ptAssign then
   begin
     Expected(ptAssign);
@@ -2417,6 +2427,21 @@ begin
   ExceptionClassTypeIdentifier;
 end;
 
+procedure TmwSimplePasPar.InlineConstSection;
+begin
+  case TokenID of
+    ptConst:
+      begin
+        NextToken;
+        ConstantDeclaration;
+      end;
+  else
+    begin
+      SynError(InvalidConstSection);
+    end;
+  end;
+end;
+
 procedure TmwSimplePasPar.InlineStatement;
 begin
   Expected(ptInline);
@@ -2428,6 +2453,29 @@ begin
     Expected(ptIntegerConst);
   end;
   Expected(ptRoundClose);
+end;
+
+procedure TmwSimplePasPar.InlineVarSection;
+begin
+  Expected(ptVar);
+  while TokenID = ptIdentifier do
+    InlineVarDeclaration;
+
+  if TokenID = ptAssign then
+  begin
+    NextToken;
+    Expression;
+  end;
+end;
+
+procedure TmwSimplePasPar.InlineVarDeclaration;
+begin
+  VarNameList;
+  if TokenID = ptColon then
+  begin
+    NextToken;
+    TypeKind;
+  end;
 end;
 
 procedure TmwSimplePasPar.InParameter;
@@ -2572,10 +2620,10 @@ end;
 
 procedure TmwSimplePasPar.Statements;
 begin {removed ptIntegerConst jdj-Put back in for labels}
-  while TokenID in [ptAddressOp, ptAsm, ptBegin, ptCase, ptDoubleAddressOp,
+  while TokenID in [ptAddressOp, ptAsm, ptBegin, ptCase, ptConst, ptDoubleAddressOp,
     ptFor, ptGoTo, ptIdentifier, ptIf, ptInherited, ptInline, ptIntegerConst,
     ptPointerSymbol, ptRaise, ptRoundOpen, ptRepeat, ptSemiColon, ptString,
-    ptStringConst, ptTry, ptWhile, ptWith, ptCompilerProc] do
+    ptStringConst, ptTry, ptVar, ptWhile, ptWith, ptCompilerProc] do
   begin
     Statement;
     Semicolon;
@@ -2615,6 +2663,10 @@ begin
     ptCase:
       begin
         CaseStatement;
+      end;
+    ptConst:
+      begin
+        InlineConstSection;
       end;
     ptFor:
       begin
@@ -2685,6 +2737,10 @@ begin
     ptTry:
       begin
         TryStatement;
+      end;
+    ptVar:
+      begin
+        InlineVarSection;
       end;
     ptWhile:
       begin

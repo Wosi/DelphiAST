@@ -68,6 +68,7 @@ type
   private
     procedure BuildExpressionTree(ExpressionMethod: TTreeBuilderMethod);
     procedure BuildParametersList(ParametersListMethod: TTreeBuilderMethod);
+    procedure RearrangeVarSection(const VarSect: TSyntaxNode);
     procedure ParserMessage(Sender: TObject; const Typ: TMessageEventType; const Msg: string; X, Y: Integer);
     function NodeListToString(NamesNode: TSyntaxNode): string;
     procedure MoveMembersToVisibilityNodes(TypeNode: TSyntaxNode);
@@ -102,7 +103,7 @@ type
     procedure CaseSelector; override;
     procedure CaseStatement; override;
     procedure ClassClass; override;
-    procedure ClassConstraint; override;    
+    procedure ClassConstraint; override;
     procedure ClassField; override;
     procedure ClassForward; override;
     procedure ClassFunctionHeading; override;
@@ -172,6 +173,8 @@ type
     procedure InheritedStatement; override;
     procedure InheritedVariableReference; override;
     procedure InitializationSection; override;
+    procedure InlineVarDeclaration; override;
+    procedure InlineVarSection; override;
     procedure InterfaceForward; override;
     procedure InterfaceGUID; override;
     procedure InterfaceSection; override;
@@ -245,7 +248,7 @@ type
     procedure VisibilityPublic; override;
     procedure VisibilityPublished; override;
     procedure VisibilityStrictPrivate; override;
-    procedure VisibilityStrictProtected; override;    
+    procedure VisibilityStrictProtected; override;
     procedure WhileStatement; override;
     procedure WithExpressionList; override;
     procedure WithStatement; override;
@@ -773,7 +776,7 @@ var
   Field, TypeInfo, TypeArgs: TSyntaxNode;
   IsClassVar: Boolean;
 begin
-  Parent := FStack.Peek;  
+  Parent := FStack.Peek;
   IsClassVar := (Parent.Typ = ntVariables) and Parent.HasAttribute(anClass);
 
   Fields := TSyntaxNode.Create(ntFields);
@@ -904,11 +907,11 @@ begin
   Variables := FStack.Push(ntVariables);
   try
     Variables.SetAttribute(anClass, AttributeValues[atTrue]);
-    inherited;    
+    inherited;
   finally
     FStack.Pop;
   end;
-  
+
   try
     for FieldNode in Variables.ChildNodes do
       FStack.AddChild(FieldNode.Clone);
@@ -1044,7 +1047,7 @@ begin
     inherited;
   finally
     FStack.Pop;
-  end;  
+  end;
 end;
 
 procedure TPasSyntaxTreeBuilder.ConstructorConstraint;
@@ -1054,7 +1057,7 @@ begin
     inherited;
   finally
     FStack.Pop;
-  end;  
+  end;
 end;
 
 procedure TPasSyntaxTreeBuilder.RecordConstraint;
@@ -1064,7 +1067,7 @@ begin
     inherited;
   finally
     FStack.Pop;
-  end;  
+  end;
 end;
 
 procedure TPasSyntaxTreeBuilder.ConstSection;
@@ -1410,7 +1413,7 @@ begin
     SetCurrentCompoundNodesEndPosition;
   finally
     FStack.Pop;
-  end;    
+  end;
 end;
 
 procedure TPasSyntaxTreeBuilder.FinallyBlock;
@@ -1516,7 +1519,7 @@ begin
       begin
         TypeParamsNode := ChildNode;
         TypeParams := '';
-        
+
         for TypeParam in ChildNode.ChildNodes do
         begin
           TypeNode := TypeParam.FindNode(ntType);
@@ -1543,7 +1546,7 @@ begin
     if Assigned(TypeParamsNode) then
     begin
       NameNode.ExtractChild(TypeParamsNode);
-      Temp.AddChild(TypeParamsNode);      
+      Temp.AddChild(TypeParamsNode);
     end;
     Temp.DeleteChild(NameNode);
   end;
@@ -1644,7 +1647,42 @@ begin
     SetCurrentCompoundNodesEndPosition;
   finally
     FStack.Pop;
-  end;  
+  end;
+end;
+
+procedure TPasSyntaxTreeBuilder.InlineVarDeclaration;
+begin
+  FStack.Push(ntVariables);
+  try
+    inherited;
+  finally
+    FStack.Pop;
+  end;
+end;
+
+procedure TPasSyntaxTreeBuilder.InlineVarSection;
+var
+  VarSect, Variables, Expression: TSyntaxNode;
+begin
+  VarSect := TSyntaxNode.Create(ntUnknown);
+  try
+    Variables := FStack.Push(ntVariables);
+
+    FStack.Push(VarSect);
+    try
+      inherited InlineVarSection;
+    finally
+      FStack.Pop;
+    end;
+    RearrangeVarSection(VarSect);
+    Expression := VarSect.FindNode(ntExpression);
+    if Assigned(Expression) then
+      Variables.AddChild(ntAssign).AddChild(Expression.Clone);
+
+    FStack.Pop;
+  finally
+    VarSect.Free;
+  end;
 end;
 
 procedure TPasSyntaxTreeBuilder.InterfaceForward;
@@ -2115,8 +2153,8 @@ begin
   except
     on E: EParserException do
       raise ESyntaxTreeException.Create(E.Line, E.Col, Lexer.FileName, E.Message, Result);
-    on E: ESyntaxError do 
-      raise ESyntaxTreeException.Create(E.PosXY.X, E.PosXY.Y, Lexer.FileName, E.Message, Result);      
+    on E: ESyntaxError do
+      raise ESyntaxTreeException.Create(E.PosXY.X, E.PosXY.Y, Lexer.FileName, E.Message, Result);
     else
       FreeAndNil(Result);
       raise;
@@ -2383,7 +2421,7 @@ begin
     SetCurrentCompoundNodesEndPosition;
   finally
     FStack.Pop;
-  end;  
+  end;
 end;
 
 procedure TPasSyntaxTreeBuilder.TypeId;
@@ -2394,19 +2432,19 @@ var
 begin
   TypeNode := FStack.Push(ntType);
   try
-    inherited;         
-    
+    inherited;
+
     InnerTypeName := '';
-    InnerTypeNode := TypeNode.FindNode(ntType);    
+    InnerTypeNode := TypeNode.FindNode(ntType);
     if Assigned(InnerTypeNode) then
     begin
       InnerTypeName := InnerTypeNode.GetAttribute(anName);
-      for SubNode in InnerTypeNode.ChildNodes do 
+      for SubNode in InnerTypeNode.ChildNodes do
         TypeNode.AddChild(SubNode.Clone);
-        
+
       TypeNode.DeleteChild(InnerTypeNode);
-    end;       
-    
+    end;
+
     TypeName := '';
     for i := Length(TypeNode.ChildNodes) - 1 downto 0 do
     begin
@@ -2415,16 +2453,16 @@ begin
       begin
         if TypeName <> '' then
           TypeName := '.' + TypeName;
-          
+
         TypeName := SubNode.GetAttribute(anName) + TypeName;
         TypeNode.DeleteChild(SubNode);
-      end;       
+      end;
     end;
-    
+
     if TypeName <> '' then
-      TypeName := '.' + TypeName;   
-    TypeName := InnerTypeName + TypeName;  
-      
+      TypeName := '.' + TypeName;
+    TypeName := InnerTypeName + TypeName;
+
     DoHandleString(TypeName);
     TypeNode.SetAttribute(anName, TypeName);
   finally
@@ -2613,8 +2651,7 @@ end;
 
 procedure TPasSyntaxTreeBuilder.VarSection;
 var
-  VarSect, Temp: TSyntaxNode;
-  VarList, Variable, TypeInfo, ValueInfo: TSyntaxNode;
+  VarSect: TSyntaxNode;
 begin
   VarSect := TSyntaxNode.Create(ntUnknown);
   try
@@ -2627,34 +2664,41 @@ begin
       FStack.Pop;
     end;
 
-    for VarList in VarSect.ChildNodes do
-    begin
-      TypeInfo := VarList.FindNode(ntType);
-      ValueInfo := VarList.FindNode(ntValue);
-      for Variable in VarList.ChildNodes do
-      begin
-        if Variable.Typ <> ntName then
-          Continue;
-
-        Temp := FStack.Push(ntVariable);
-        try
-          Temp.AssignPositionFrom(Variable);
-
-          FStack.AddChild(Variable.Clone);
-          if Assigned(TypeInfo) then
-            FStack.AddChild(TypeInfo.Clone);
-
-          if Assigned(ValueInfo) then
-            FStack.AddChild(ValueInfo.Clone);
-        finally
-          FStack.Pop;
-        end;
-      end;
-    end;
-
+    RearrangeVarSection(VarSect);
     FStack.Pop;
   finally
     VarSect.Free;
+  end;
+end;
+
+procedure TPasSyntaxTreeBuilder.RearrangeVarSection(const VarSect: TSyntaxNode);
+var
+  Temp: TSyntaxNode;
+  VarList, Variable, TypeInfo, ValueInfo: TSyntaxNode;
+begin
+  for VarList in VarSect.ChildNodes do
+  begin
+    TypeInfo := VarList.FindNode(ntType);
+    ValueInfo := VarList.FindNode(ntValue);
+    for Variable in VarList.ChildNodes do
+    begin
+      if Variable.Typ <> ntName then
+        Continue;
+
+      Temp := FStack.Push(ntVariable);
+      try
+        Temp.AssignPositionFrom(Variable);
+
+        FStack.AddChild(Variable.Clone);
+        if Assigned(TypeInfo) then
+          FStack.AddChild(TypeInfo.Clone);
+
+        if Assigned(ValueInfo) then
+          FStack.AddChild(ValueInfo.Clone);
+      finally
+        FStack.Pop;
+      end;
+    end;
   end;
 end;
 
