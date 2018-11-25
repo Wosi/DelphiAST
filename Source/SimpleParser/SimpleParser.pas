@@ -3592,7 +3592,7 @@ begin
       end;
     ptInherited:
       begin
-        InheritedVariableReference;
+        InheritedStatement;
       end;
   else
     variable;
