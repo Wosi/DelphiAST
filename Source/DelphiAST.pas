@@ -1102,7 +1102,8 @@ begin
           FStack.AddChild(Constant.Clone);
           if Assigned(TypeInfo) then
             FStack.AddChild(TypeInfo.Clone);
-          FStack.AddChild(Value.Clone);
+          if Assigned(Value) then
+            FStack.AddChild(Value.Clone);
         finally
           FStack.Pop;
         end;

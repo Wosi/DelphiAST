@@ -4717,8 +4717,17 @@ procedure TmwSimplePasPar.ConstantColon;
 begin
   Expected(ptColon);
   ConstantType;
-  Expected(ptEqual);
-  ConstantValueTyped;
+
+  if Lexer.TokenID = ptSemicolon then
+  begin
+    Expected(ptSemicolon);
+    ExternalDirective;
+  end
+  else
+  begin
+    Expected(ptEqual);
+    ConstantValueTyped;
+  end;
 end;
 
 procedure TmwSimplePasPar.ConstantEqual;
